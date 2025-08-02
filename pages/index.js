@@ -1,26 +1,32 @@
-import { useState } from 'react';
-
-const questions = [
-  {
-    question: "What is the main function of the roots in a plant?",
-    choices: ["To make food", "To absorb water", "To support leaves", "To release oxygen"],
-    answer: 1,
-    explanation: "Roots absorb water and nutrients from the soil."
-  },
-  {
-    question: "Which gas do plants absorb during photosynthesis?",
-    choices: ["Oxygen", "Hydrogen", "Carbon Dioxide", "Nitrogen"],
-    answer: 2,
-    explanation: "Plants absorb carbon dioxide for photosynthesis."
-  }
-];
+import { useState } from "react";
 
 export default function Home() {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [questions, setQuestions] = useState([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
 
   const q = questions[current];
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("pdf", file);
+
+    const res = await fetch("/api/process-pdf", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    setQuestions(data.questions);
+    setCurrent(0);
+    setUploading(false);
+  };
 
   const checkAnswer = (index) => {
     setSelected(index);
@@ -34,27 +40,49 @@ export default function Home() {
   };
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial' }}>
-      <h2>ICAS Science Practice</h2>
-      <p>{q.question}</p>
-      {q.choices.map((choice, i) => (
-        <div key={i}>
-          <button 
-            onClick={() => checkAnswer(i)} 
-            disabled={showFeedback}
-            style={{ margin: '5px', padding: '10px', backgroundColor: selected === i ? '#ddd' : '#fff' }}
-          >
-            {choice}
-          </button>
-        </div>
-      ))}
-      {showFeedback && (
-        <div style={{ marginTop: '10px' }}>
-          <p>
-            {selected === q.answer ? "✅ Correct!" : "❌ Incorrect."}
-          </p>
-          <p><strong>Explanation:</strong> {q.explanation}</p>
-          <button onClick={nextQuestion} style={{ marginTop: '10px' }}>Next Question</button>
+    <div className="p-6 font-sans max-w-xl mx-auto">
+      <h1 className="text-xl font-bold mb-4">ICAS Science Practice App</h1>
+
+      <div className="mb-6">
+        <input
+          type="file"
+          accept="application/pdf"
+          onChange={(e) => setFile(e.target.files[0])}
+          className="mb-2"
+        />
+        <button
+          onClick={handleUpload}
+          className="px-4 py-2 bg-blue-600 text-white rounded"
+          disabled={uploading}
+        >
+          {uploading ? "Processing..." : "Upload ICAS PDF"}
+        </button>
+      </div>
+
+      {questions.length > 0 && q && (
+        <div>
+          <p>{q.question}</p>
+          {q.choices.map((choice, i) => (
+            <div key={i}>
+              <button
+                onClick={() => checkAnswer(i)}
+                disabled={showFeedback}
+                className="my-1 px-3 py-2 border rounded"
+              >
+                {choice}
+              </button>
+            </div>
+          ))}
+
+          {showFeedback && (
+            <div className="mt-4">
+              <p>
+                {selected === q.answer ? "✅ Correct!" : "❌ Incorrect."}
+              </p>
+              <p><strong>Explanation:</strong> {q.explanation || "No explanation available."}</p>
+              <button onClick={nextQuestion} className="mt-2 px-3 py-1 bg-green-600 text-white rounded">Next Question</button>
+            </div>
+          )}
         </div>
       )}
     </div>
